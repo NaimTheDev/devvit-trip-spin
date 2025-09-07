@@ -13,9 +13,12 @@ export class UIController {
   private diceIcon!: HTMLElement;
   private spinText!: HTMLElement;
   private overlay!: HTMLElement;
+  private snooImageElement: HTMLImageElement | null = null;
 
   constructor() {
     this.initializeElements();
+    // Try to find the snoo image if it already exists
+    this.snooImageElement = document.querySelector('.snoo-plane-img') as HTMLImageElement;
   }
 
   private initializeElements(): void {
@@ -24,6 +27,8 @@ export class UIController {
     this.diceIcon = document.querySelector('.dice-icon') as HTMLElement;
     this.spinText = document.querySelector('.spin-text') as HTMLElement;
     this.overlay = document.querySelector('.overlay') as HTMLElement;
+    // Try to find the snoo image if it already exists
+    this.snooImageElement = document.querySelector('.snoo-plane-img') as HTMLImageElement;
 
     // Verify all elements exist
     if (
@@ -64,14 +69,43 @@ export class UIController {
     this.diceIcon.textContent = '🎲';
     this.spinText.textContent = 'SPIN';
     this.buttonElement.disabled = false;
+    // Remove snoo image if present
+    if (this.snooImageElement && this.snooImageElement.parentElement) {
+      this.snooImageElement.parentElement.removeChild(this.snooImageElement);
+      this.snooImageElement = null;
+    }
   }
 
   private hideUI(): void {
     this.overlay.style.opacity = '0';
+    // Remove snoo image if present
+    if (this.snooImageElement && this.snooImageElement.parentElement) {
+      this.snooImageElement.parentElement.removeChild(this.snooImageElement);
+      this.snooImageElement = null;
+    }
   }
 
   private showResultState(location: SelectedLocation | null): void {
     this.overlay.style.opacity = '1';
+
+    // Add snoo image overlay above the globe
+    const globeContainer = document.querySelector('.globe-container');
+    if (globeContainer && !document.querySelector('.snoo-plane-img')) {
+      const img = document.createElement('img');
+      img.src = '/snoo_on_plane_no_background.png';
+      img.alt = 'Snoo on Plane';
+      img.className = 'snoo-plane-img';
+      img.style.position = 'absolute';
+      img.style.left = '50%';
+      img.style.top = '50%';
+      img.style.transform = 'translate(-50%, -50%)';
+      img.style.width = '300px';
+      img.style.pointerEvents = 'none';
+      img.style.zIndex = '10';
+      (globeContainer as HTMLElement).style.position = 'relative';
+      globeContainer.appendChild(img);
+      this.snooImageElement = img;
+    }
 
     if (!location) {
       this.titleElement.innerHTML = `
@@ -103,8 +137,8 @@ export class UIController {
     }
 
     this.buttonElement.style.display = 'flex';
-    this.diceIcon.textContent = '🌍';
-    this.spinText.textContent = 'Spin Again!';
+    this.diceIcon.textContent = '📄';
+    this.spinText.textContent = 'Get your Itinerary';
     this.buttonElement.disabled = false;
   }
 
