@@ -1,0 +1,152 @@
+/* Global resets */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #7fb8e5; /* Light blue background matching the design */
+}
+
+/* Three.js canvas fills the screen */
+#bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 10px 25px #7fb8e5); /* Much lighter */
+}
+
+/* Overlay container sitting above the canvas */
+.overlay {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* Header Section */
+.header {
+  pointer-events: auto;
+  margin-top: 20px;
+  max-width: 600px;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1a365d; /* Dark blue text like in the design */
+  text-align: center;
+}
+
+/* Globe Container */
+.globe-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 350px;
+  height: 350px;
+  pointer-events: auto;
+  flex-shrink: 0;
+}
+
+/* Action Section */
+.action-section {
+  pointer-events: auto;
+  margin-bottom: 40px;
+  flex-shrink: 0;
+}
+
+.spin-button {
+  background: #ff4500; /* Reddit orange */
+  border: none;
+  border-radius: 50px;
+  padding: 18px 36px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(255, 69, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  letter-spacing: 1px;
+}
+
+.spin-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 69, 0, 0.4);
+  background: #e63946;
+}
+
+.spin-button:active {
+  transform: translateY(0px);
+}
+
+.dice-icon {
+  font-size: 1.4rem;
+  filter: brightness(1.2);
+}
+
+.spin-text {
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.divider {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+/* Mobile responsiveness */
+@media (max-height: 700px) {
+  .header {
+    margin-top: 16px;
+  }
+
+  .app-title {
+    font-size: 1.8rem;
+  }
+
+  .globe-container {
+    max-width: 280px;
+    height: 280px;
+  }
+
+  .action-section {
+    margin-bottom: 24px;
+  }
+
+  .spin-button {
+    padding: 16px 32px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (max-height: 600px) {
+  .globe-container {
+    max-width: 240px;
+    height: 240px;
+  }
+
+  .app-title {
+    font-size: 1.6rem;
+  }
+}
