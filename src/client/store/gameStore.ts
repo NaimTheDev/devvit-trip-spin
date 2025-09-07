@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { LocationService, type SelectedLocation } from '../utils/LocationService';
 
 export enum GameState {
   IDLE = 'idle',
@@ -9,20 +10,20 @@ export enum GameState {
 
 interface GameStore {
   currentState: GameState;
-  currentCountry: string;
+  currentLocation: SelectedLocation | null;
   isSpinning: boolean;
 
   startSpin: () => Promise<void>;
   resetToIdle: () => void;
 
   setState: (state: GameState) => void;
-  setCountry: (country: string) => void;
+  setLocation: (location: SelectedLocation | null) => void;
   setSpinning: (isSpinning: boolean) => void;
 }
 export const useGameStore = create<GameStore>((set, get) => ({
   // set the initial state
   currentState: GameState.IDLE,
-  currentCountry: '',
+  currentLocation: null,
   isSpinning: false,
 
   // actions that change the state
@@ -37,15 +38,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isSpinning: true,
     });
 
-    // Get random country while spinning
+    // Get random location from local dataset while spinning
     try {
-      const response = await fetch('/api/random-country');
-      if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
-      set({ currentCountry: data.country || 'Unknown Destination' });
+      const locationService = LocationService.getInstance();
+
+      // Ensure locations are loaded
+      if (!locationService.isDataLoaded()) {
+        await locationService.loadLocations();
+      }
+
+      const selectedLocation = locationService.getRandomLocation();
+      set({ currentLocation: selectedLocation });
+
+      console.log('Selected location:', selectedLocation);
     } catch (error) {
-      console.error('Error fetching country:', error);
-      set({ currentCountry: 'Unknown Destination' });
+      console.error('Error selecting location:', error);
+      set({
+        currentLocation: {
+          name: 'Unknown Destination',
+          country: 'Unknown',
+          latitude: 0,
+          longitude: 0,
+          population: 0,
+        },
+      });
     }
 
     // Phase 2: Zooming (after 2 seconds)
@@ -68,13 +84,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     setTimeout(() => {
       set({
         currentState: GameState.IDLE,
-        currentCountry: '',
+        currentLocation: null,
         isSpinning: false,
       });
     }, 1000);
   },
 
   setState: (state: GameState) => set({ currentState: state }),
-  setCountry: (country: string) => set({ currentCountry: country }),
+  setLocation: (location: SelectedLocation | null) => set({ currentLocation: location }),
   setSpinning: (isSpinning: boolean) => set({ isSpinning }),
 }));

@@ -1,8 +1,9 @@
 import { GameState } from '../store/gameStore';
+import { type SelectedLocation } from '../utils/LocationService';
 
 interface GameStoreState {
   currentState: GameState;
-  currentCountry: string;
+  currentLocation: SelectedLocation | null;
   isSpinning: boolean;
 }
 
@@ -37,7 +38,7 @@ export class UIController {
   }
 
   updateUI(state: GameStoreState): void {
-    const { currentState, currentCountry } = state;
+    const { currentState, currentLocation } = state;
 
     switch (currentState) {
       case GameState.IDLE:
@@ -50,7 +51,7 @@ export class UIController {
         break;
 
       case GameState.RESULT:
-        this.showResultState(currentCountry);
+        this.showResultState(currentLocation);
         break;
     }
   }
@@ -69,17 +70,41 @@ export class UIController {
     this.overlay.style.opacity = '0';
   }
 
-  private showResultState(country: string): void {
+  private showResultState(location: SelectedLocation | null): void {
     this.overlay.style.opacity = '1';
-    this.titleElement.innerHTML = `
-      <div style="margin-bottom: 16px;">
-        <span style="color: #ff4500; font-size: 1.5rem;">Next Stop:</span>
-      </div>
-      <div style="color: white; font-size: 2.5rem; font-weight: 800;">${country.toUpperCase()}</div>
-    `;
+
+    if (!location) {
+      this.titleElement.innerHTML = `
+        <div style="margin-bottom: 16px;">
+          <span style="color: #ff4500; font-size: 1.5rem;">Next Stop:</span>
+        </div>
+        <div style="color: white; font-size: 2.5rem; font-weight: 800;">UNKNOWN DESTINATION</div>
+      `;
+    } else {
+      const locationName = location.name;
+      const countryName = location.country;
+      const region = location.region;
+
+      let displayLocation = locationName;
+      if (region && region !== countryName) {
+        displayLocation += `, ${region}`;
+      }
+      if (countryName && countryName !== locationName) {
+        displayLocation += `, ${countryName}`;
+      }
+
+      this.titleElement.innerHTML = `
+        <div style="margin-bottom: 16px;">
+          <span style="color: #ff4500; font-size: 1.5rem;">Next Stop:</span>
+        </div>
+        <div style="color: white; font-size: 2.5rem; font-weight: 800;">${displayLocation.toUpperCase()}</div>
+        ${location.population > 0 ? `<div style="color: #a0aec0; font-size: 1rem; margin-top: 8px;">Population: ${location.population.toLocaleString()}</div>` : ''}
+      `;
+    }
+
     this.buttonElement.style.display = 'flex';
     this.diceIcon.textContent = '🌍';
-    this.spinText.textContent = 'Spin the Globe!';
+    this.spinText.textContent = 'Spin Again!';
     this.buttonElement.disabled = false;
   }
 
