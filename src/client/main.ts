@@ -80,6 +80,11 @@ class TravelRouletteApp {
         this.globe.stopSpin();
         break;
 
+      case GameState.ITINERARY:
+        // Keep the same visual state as RESULT for the itinerary view
+        this.globe.stopSpin();
+        break;
+
       case GameState.IDLE:
         this.camera.zoomOut();
         this.globe.hideRim();
@@ -91,9 +96,11 @@ class TravelRouletteApp {
 
   private setupEventListeners() {
     document.querySelector('.spin-button')?.addEventListener('click', () => {
-      const { currentState, startSpin, resetToIdle } = useGameStore.getState();
+      const { currentState, startSpin, resetToIdle, getItinerary } = useGameStore.getState();
 
       if (currentState === GameState.RESULT) {
+        void getItinerary();
+      } else if (currentState === GameState.ITINERARY) {
         resetToIdle();
       } else if (currentState === GameState.IDLE) {
         void startSpin();

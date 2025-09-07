@@ -4,9 +4,12 @@ import {
   IncrementResponse,
   DecrementResponse,
   RandomCountryResponse,
+  ItineraryResponse,
+  ItineraryPost,
 } from '../shared/types/api';
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
+import { findContent } from './core/searchContent';
 
 const app = express();
 
@@ -335,6 +338,91 @@ router.get<{ postId: string }, RandomCountryResponse | { status: string; message
     }
   }
 );
+
+router.post<
+  { postId: string },
+  ItineraryResponse | { status: string; message: string },
+  { country: string }
+>('/api/itinerary', async (req, res): Promise<void> => {
+  const { postId } = context;
+  if (!postId) {
+    res.status(400).json({
+      status: 'error',
+      message: 'postId is required',
+    });
+    return;
+  }
+
+  const { country } = req.body;
+  if (!country) {
+    res.status(400).json({
+      status: 'error',
+      message: 'country is required',
+    });
+    return;
+  }
+
+  try {
+    const { posts, subredditUsed } = await findContent(country);
+
+    // Transform Reddit posts to our ItineraryPost format
+    const itineraryPosts: ItineraryPost[] = posts.children.map((post: unknown) => {
+      const redditPost = post as Record<string, unknown>;
+      const thumbnail = redditPost.thumbnail as
+        | { url: string; height: number; width: number }
+        | undefined;
+
+      return {
+        id: String(redditPost.id || ''),
+        authorId: redditPost.authorId ? String(redditPost.authorId) : undefined,
+        authorName: String(redditPost.authorName || ''),
+        subredditId: String(redditPost.subredditId || ''),
+        subredditName: String(redditPost.subredditName || ''),
+        permalink: String(redditPost.permalink || ''),
+        title: String(redditPost.title || ''),
+        body: redditPost.body ? String(redditPost.body) : undefined,
+        bodyHtml: redditPost.bodyHtml ? String(redditPost.bodyHtml) : undefined,
+        url: String(redditPost.url || ''),
+        thumbnail: thumbnail
+          ? {
+              url: thumbnail.url,
+              height: thumbnail.height,
+              width: thumbnail.width,
+            }
+          : undefined,
+        createdAt: redditPost.createdAt ? new Date(String(redditPost.createdAt)) : new Date(),
+        score: Number(redditPost.score || 0),
+        numberOfComments: Number(redditPost.numberOfComments || 0),
+        numberOfReports: Number(redditPost.numberOfReports || 0),
+        approved: Boolean(redditPost.approved),
+        spam: Boolean(redditPost.spam),
+        stickied: Boolean(redditPost.stickied),
+        removed: Boolean(redditPost.removed),
+        archived: Boolean(redditPost.archived),
+        edited: Boolean(redditPost.edited),
+        locked: Boolean(redditPost.locked),
+        nsfw: Boolean(redditPost.nsfw),
+        quarantined: Boolean(redditPost.quarantined),
+        spoiler: Boolean(redditPost.spoiler),
+        hidden: Boolean(redditPost.hidden),
+      };
+    });
+
+    res.json({
+      type: 'itinerary',
+      postId,
+      country,
+      subredditUsed,
+      posts: itineraryPosts,
+    });
+  } catch (error) {
+    console.error('Failed to fetch itinerary:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to generate itinerary',
+    });
+  }
+});
 
 router.post('/internal/on-app-install', async (_req, res): Promise<void> => {
   try {
