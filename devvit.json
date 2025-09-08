@@ -4,7 +4,17 @@
   "permissions": {
     "http": {
       "enable": true,
-      "domains": ["www.sathishsundar.in"]
+      "domains": ["www.sathishsundar.in", "api.openai.com"]
+    }
+  },
+  "settings": {
+    "global": {
+      "openaiApiKey": {
+        "type": "string",
+        "label": "OpenAI API Key",
+        "defaultValue": "",
+        "isSecret": true
+      }
     }
   },
   "post": {

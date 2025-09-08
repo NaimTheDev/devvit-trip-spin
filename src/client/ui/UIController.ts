@@ -1,6 +1,6 @@
 import { GameState } from '../store/gameStore';
 import { type SelectedLocation } from '../utils/LocationService';
-import type { ItineraryPost, ItineraryComment } from '../../shared/types/api';
+import type { ItineraryPost, ItineraryComment, GeneratedItinerary } from '../../shared/types/api';
 
 interface GameStoreState {
   currentState: GameState;
@@ -8,6 +8,7 @@ interface GameStoreState {
   isSpinning: boolean;
   itineraryPosts: ItineraryPost[];
   itineraryComments: ItineraryComment[];
+  generatedItinerary: GeneratedItinerary | null;
   subredditUsed: string;
 }
 
@@ -47,7 +48,7 @@ export class UIController {
   }
 
   updateUI(state: GameStoreState): void {
-    const { currentState, currentLocation, itineraryComments, subredditUsed } = state;
+    const { currentState, currentLocation, generatedItinerary, subredditUsed } = state;
 
     switch (currentState) {
       case GameState.IDLE:
@@ -64,7 +65,7 @@ export class UIController {
         break;
 
       case GameState.ITINERARY:
-        this.showItineraryState(currentLocation, itineraryComments, subredditUsed);
+        this.showItineraryState(currentLocation, generatedItinerary, subredditUsed);
         break;
     }
   }
@@ -158,55 +159,122 @@ export class UIController {
 
   private showItineraryState(
     location: SelectedLocation | null,
-    comments: ItineraryComment[],
+    generatedItinerary: GeneratedItinerary | null,
     subredditUsed: string
   ): void {
     this.overlay.style.opacity = '1';
 
-    if (!location) {
-      this.titleElement.innerHTML = 'Itinerary Unavailable';
+    if (!location || !generatedItinerary) {
+      this.titleElement.innerHTML = `
+        <div style="color: white; font-size: 2rem; text-align: center;">
+          Itinerary Unavailable
+        </div>
+      `;
       return;
     }
 
-    const countryName = location.country;
+    // Remove snoo image if present during itinerary view
+    if (this.snooImageElement && this.snooImageElement.parentElement) {
+      this.snooImageElement.parentElement.removeChild(this.snooImageElement);
+      this.snooImageElement = null;
+    }
 
-    // Create itinerary HTML using comments as the basis for recommendations
+    const destination = generatedItinerary.destination || location.country;
+
+    // Create the complete itinerary view matching the mockup
     const itineraryHTML = `
-      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 16px; color: white; text-align: left; max-width: 600px; margin: 0 auto;">
-        <div style="margin-bottom: 20px;">
-          <h2 style="margin: 0 0 8px 0; font-size: 2rem; font-weight: 800;">${countryName}</h2>
-          <p style="margin: 0; font-size: 1rem; opacity: 0.9;">3-Day AI Itinerary</p>
-        </div>
+      <div style="width: 100%; max-width: 500px; margin: 0 auto; background: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%); border-radius: 20px; overflow: hidden; color: white; text-align: left;">
         
-        <div style="margin-bottom: 24px;">
-          ${comments
-            .slice(0, 3)
-            .map(
-              (comment, index) => `
-            <div style="background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #ff4500;">
-              <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                <div style="width: 60px; height: 60px; background: #ff4500; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0;">
-                  <img src="/assets/snoo_on_plane_no_background.png" alt="Day ${index + 1}" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'">
-                </div>
-                <div>
-                  <h3 style="margin: 0 0 4px 0; font-size: 1.2rem; font-weight: 700;">Day ${index + 1}: ${this.extractActivityFromComment(comment.body)}</h3>
-                  <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">${comment.body}</p>
+        <!-- Header Image Section -->
+        <div style="position: relative; height: 200px; background: linear-gradient(135deg, #2d5aa0 0%, #4fc3f7 100%); display: flex; align-items: center; justify-content: center; margin-bottom: 0;">
+          <div style="text-align: center; z-index: 2;">
+            <h1 style="margin: 0; font-size: 2.2rem; font-weight: 800; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">${destination}</h1>
+          </div>
+          <!-- Background pattern overlay -->
+          <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; viewBox=&quot;0 0 100 100&quot;><circle cx=&quot;20&quot; cy=&quot;20&quot; r=&quot;2&quot; fill=&quot;white&quot; opacity=&quot;0.1&quot;/><circle cx=&quot;80&quot; cy=&quot;40&quot; r=&quot;1.5&quot; fill=&quot;white&quot; opacity=&quot;0.15&quot;/><circle cx=&quot;40&quot; cy=&quot;70&quot; r=&quot;1&quot; fill=&quot;white&quot; opacity=&quot;0.1&quot;/></svg>') repeat; opacity: 0.6;"></div>
+        </div>
+
+        <!-- Content Section -->
+        <div style="padding: 24px;">
+          <h2 style="margin: 0 0 20px 0; font-size: 1.5rem; font-weight: 700; color: white;">${generatedItinerary.duration}</h2>
+          
+          <!-- Days Section -->
+          <div style="margin-bottom: 24px;">
+            ${generatedItinerary.days
+              .map(
+                (day, index) => `
+              <div style="background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 4px solid #ff4500;">
+                <div style="display: flex; align-items: flex-start; gap: 16px;">
+                  <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #ff4500 0%, #ff6b35 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem;">
+                    ${index + 1}
+                  </div>
+                  <div style="flex: 1;">
+                    <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; font-weight: 700; color: white;">Day ${day.day}: ${day.title}</h3>
+                    <p style="margin: 0; font-size: 0.9rem; color: rgba(255,255,255,0.8); line-height: 1.4;">${day.description}</p>
+                    ${
+                      day.activities && day.activities.length > 0
+                        ? `<div style="margin-top: 8px;">
+                        ${day.activities
+                          .slice(0, 2)
+                          .map(
+                            (activity) =>
+                              `<span style="display: inline-block; background: rgba(255, 69, 0, 0.2); color: #ff4500; padding: 2px 8px; border-radius: 10px; font-size: 0.8rem; margin-right: 6px; margin-bottom: 4px;">${activity}</span>`
+                          )
+                          .join('')}
+                      </div>`
+                        : ''
+                    }
+                  </div>
                 </div>
               </div>
-            </div>
-          `
-            )
-            .join('')}
-        </div>
-        
-        <div style="background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px;">
-          <div style="display: flex; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 1rem; color: #ff4500; margin-right: 8px;">🕒</span>
-            <span style="font-size: 0.9rem; font-weight: 600;">Community Highlights</span>
+            `
+              )
+              .join('')}
           </div>
-          <div style="display: flex; align-items: center;">
-            <img src="/assets/snoo_on_plane_no_background.png" alt="Reddit" style="width: 20px; height: 20px; margin-right: 8px;" onerror="this.style.display='none'">
-            <span style="font-size: 0.8rem; opacity: 0.8;">from r/${subredditUsed}</span>
+
+          <!-- Community Highlights Section -->
+          <div style="background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 16px;">
+            <div style="display: flex; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 1.2rem; margin-right: 8px;">👥</span>
+              <span style="font-size: 1rem; font-weight: 600; color: white;">Community Highlights</span>
+            </div>
+            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+              <div style="width: 20px; height: 20px; background: #ff4500; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 8px; font-size: 0.7rem;">r/</div>
+              <span style="font-size: 0.9rem; color: #ff4500; font-weight: 500;">from r/${subredditUsed}</span>
+            </div>
+            ${
+              generatedItinerary.communityHighlights &&
+              generatedItinerary.communityHighlights.length > 0
+                ? `<div style="margin-top: 8px;">
+                ${generatedItinerary.communityHighlights
+                  .slice(0, 2)
+                  .map(
+                    (highlight) =>
+                      `<p style="margin: 0 0 8px 0; font-size: 0.85rem; color: rgba(255,255,255,0.8); font-style: italic;">"${highlight}"</p>`
+                  )
+                  .join('')}
+              </div>`
+                : ''
+            }
+          </div>
+
+          <!-- Travel Poll Section -->
+          <div style="margin-top: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 16px;">
+            <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 600; color: white;">Would you take this trip?</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="background: rgba(45, 175, 235, 0.8); border-radius: 25px; padding: 12px 20px; border: 2px solid #2dafeb; display: flex; align-items: center;">
+                <span style="margin-right: 8px;">⭕</span>
+                <span style="font-weight: 600;">Yes ✅</span>
+              </div>
+              <div style="background: rgba(255, 255, 255, 0.1); border-radius: 25px; padding: 12px 20px; border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center;">
+                <span style="margin-right: 8px;">⚪</span>
+                <span>No ❌</span>
+              </div>
+              <div style="background: rgba(255, 255, 255, 0.1); border-radius: 25px; padding: 12px 20px; border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center;">
+                <span style="margin-right: 8px;">⚪</span>
+                <span>Only if it's free 😊</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -217,15 +285,5 @@ export class UIController {
     this.diceIcon.textContent = '🔄';
     this.spinText.textContent = 'Plan Another Trip';
     this.buttonElement.disabled = false;
-  }
-
-  private extractActivityFromComment(commentBody: string): string {
-    // Extract a meaningful activity description from comment body
-    const cleanBody = commentBody.replace(/\[.*?\]/g, '').trim();
-    const words = cleanBody.split(' ');
-    if (words.length > 6) {
-      return words.slice(0, 6).join(' ') + '...';
-    }
-    return cleanBody;
   }
 }
