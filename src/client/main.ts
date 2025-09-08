@@ -8,6 +8,7 @@ interface GameStoreState {
   currentState: GameState;
   currentCountry: string;
   isSpinning: boolean;
+  itinerary: any;
 }
 
 class TravelRouletteApp {
@@ -57,6 +58,10 @@ class TravelRouletteApp {
         this.globe.stopSpin();
         break;
 
+      case GameState.ITINERARY:
+        // Keep the background and globe state from result
+        break;
+
       case GameState.IDLE:
         if (prevState.currentState === GameState.ZOOMING) {
           this.camera.zoomOut();
@@ -69,9 +74,11 @@ class TravelRouletteApp {
 
   private setupEventListeners() {
     document.querySelector('.spin-button')?.addEventListener('click', () => {
-      const { currentState, startSpin, resetToIdle } = useGameStore.getState();
+      const { currentState, startSpin, resetToIdle, showItinerary } = useGameStore.getState();
 
       if (currentState === GameState.RESULT) {
+        void showItinerary();
+      } else if (currentState === GameState.ITINERARY) {
         resetToIdle();
       } else if (currentState === GameState.IDLE) {
         void startSpin();

@@ -1,9 +1,12 @@
 import { GameState } from '../store/gameStore';
+import { ItineraryView } from './ItineraryView';
+import { ItineraryData } from '../../shared/types/api';
 
 interface GameStoreState {
   currentState: GameState;
   currentCountry: string;
   isSpinning: boolean;
+  itinerary: ItineraryData | null;
 }
 
 export class UIController {
@@ -12,9 +15,11 @@ export class UIController {
   private diceIcon!: HTMLElement;
   private spinText!: HTMLElement;
   private overlay!: HTMLElement;
+  private itineraryView: ItineraryView;
 
   constructor() {
     this.initializeElements();
+    this.itineraryView = new ItineraryView();
   }
 
   private initializeElements(): void {
@@ -37,20 +42,30 @@ export class UIController {
   }
 
   updateUI(state: GameStoreState): void {
-    const { currentState, currentCountry } = state;
+    const { currentState, currentCountry, itinerary } = state;
 
     switch (currentState) {
       case GameState.IDLE:
         this.showIdleState();
+        this.itineraryView.hide();
         break;
 
       case GameState.SPINNING:
       case GameState.ZOOMING:
         this.hideUI();
+        this.itineraryView.hide();
         break;
 
       case GameState.RESULT:
         this.showResultState(currentCountry);
+        this.itineraryView.hide();
+        break;
+
+      case GameState.ITINERARY:
+        this.hideUI();
+        if (itinerary) {
+          this.itineraryView.show(itinerary);
+        }
         break;
     }
   }
@@ -78,8 +93,8 @@ export class UIController {
       <div style="color: white; font-size: 2.5rem; font-weight: 800;">${country.toUpperCase()}</div>
     `;
     this.buttonElement.style.display = 'flex';
-    this.diceIcon.textContent = '🌍';
-    this.spinText.textContent = 'Spin the Globe!';
+    this.diceIcon.textContent = '📋';
+    this.spinText.textContent = 'View Itinerary';
     this.buttonElement.disabled = false;
   }
 

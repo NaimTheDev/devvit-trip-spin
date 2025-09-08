@@ -4,9 +4,11 @@ import {
   IncrementResponse,
   DecrementResponse,
   RandomCountryResponse,
+  ItineraryResponse,
 } from '../shared/types/api';
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
+import { ItineraryService } from './core/ItineraryService';
 
 const app = express();
 
@@ -331,6 +333,45 @@ router.get<{ postId: string }, RandomCountryResponse | { status: string; message
         type: 'random-country',
         postId,
         country,
+      });
+    }
+  }
+);
+
+router.get<{ postId: string }, ItineraryResponse | { status: string; message: string }>(
+  '/api/itinerary',
+  async (req, res): Promise<void> => {
+    const { postId } = context;
+    if (!postId) {
+      res.status(400).json({
+        status: 'error',
+        message: 'postId is required',
+      });
+      return;
+    }
+
+    const country = req.query.country as string;
+    if (!country) {
+      res.status(400).json({
+        status: 'error',
+        message: 'country parameter is required',
+      });
+      return;
+    }
+
+    try {
+      const itinerary = await ItineraryService.generateItinerary(country);
+      
+      res.json({
+        type: 'itinerary',
+        postId,
+        itinerary,
+      });
+    } catch (error) {
+      console.error('Failed to generate itinerary:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to generate itinerary',
       });
     }
   }
