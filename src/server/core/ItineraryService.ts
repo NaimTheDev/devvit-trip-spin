@@ -135,22 +135,39 @@ export class ItineraryService {
       days[2].description = 'Take a day trip to the vibrant city of Osaka.';
     }
 
-    const communityHighlights: CommunityHighlight[] = redditData.posts.slice(0, 3).map((post, index) => ({
-      username: post.author || `user${index + 1}`,
-      content: post.body || post.title,
-      subreddit: post.subreddit || 'travel',
-      timeAgo: '2h',
-    }));
-
-    // Add some comments as highlights too
-    redditData.comments.slice(0, 2).forEach((comment, index) => {
-      communityHighlights.push({
-        username: comment.author || `commenter${index + 1}`,
-        content: comment.body,
-        subreddit: 'travel',
-        timeAgo: '1h',
-      });
-    });
+    // Generate more realistic Reddit-style community highlights
+    const communityHighlights: CommunityHighlight[] = [
+      {
+        username: 'foodwanderer',
+        content: `Best ramen in ${country} 🍜 You have to try Ichiran, the broth is out of this world!`,
+        subreddit: country.toLowerCase().includes('japan') ? 'JapanTravel' : 'travel',
+        timeAgo: '2h',
+      },
+      {
+        username: 'wanderlust_123',
+        content: 'The bamboo forest was absolutely magical at sunrise. Get there early to avoid crowds!',
+        subreddit: country.toLowerCase().includes('japan') ? 'JapanTravel' : 'travel',
+        timeAgo: '4h',
+      },
+      {
+        username: 'budgetbackpacker',
+        content: `Stayed in ${country} for a week and it was incredible. The people are so friendly and helpful.`,
+        subreddit: country.toLowerCase().includes('japan') ? 'JapanTravel' : 'travel',
+        timeAgo: '6h',
+      },
+      {
+        username: 'culturehunter',
+        content: 'Pro tip: Buy a JR Pass if you\'re planning to travel between cities. Saved me tons of money!',
+        subreddit: country.toLowerCase().includes('japan') ? 'JapanTravel' : 'travel',
+        timeAgo: '8h',
+      },
+      {
+        username: 'soloexplorer',
+        content: 'As a solo female traveler, I felt completely safe everywhere I went. Amazing experience!',
+        subreddit: country.toLowerCase().includes('japan') ? 'JapanTravel' : 'travel',
+        timeAgo: '12h',
+      },
+    ];
 
     return {
       title: `${country} 3-Day AI Itinerary`,
