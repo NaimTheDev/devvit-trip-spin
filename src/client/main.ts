@@ -3,13 +3,13 @@ import { Globe } from './globe/Globe';
 import { Camera } from './globe/Camera';
 import { UIController } from './ui/UIController';
 import { useGameStore, GameState } from './store/gameStore';
-import { LocationService, type SelectedLocation } from './utils/LocationService';
 
-type GameStoreState = {
+interface GameStoreState {
   currentState: GameState;
-  currentLocation: SelectedLocation | null;
+  currentCountry: string;
   isSpinning: boolean;
-};
+  itinerary: any;
+}
 
 class TravelRouletteApp {
   private scene: Scene;
@@ -23,33 +23,21 @@ class TravelRouletteApp {
     this.camera = new Camera();
     this.uiController = new UIController();
 
-    void this.initializeLocationService();
     this.setupGameStoreSubscription();
     this.setupEventListeners();
     this.animate();
   }
 
-  private async initializeLocationService() {
-    try {
-      const locationService = LocationService.getInstance();
-      await locationService.loadLocations();
-      console.log(
-        `Location service initialized with ${locationService.getLocationCount()} locations`
-      );
-    } catch (error) {
-      console.error('Failed to initialize location service:', error);
-    }
-  }
-
   private setupGameStoreSubscription() {
-    useGameStore.subscribe((state) => {
+    useGameStore.subscribe((state, prevState) => {
       this.uiController.updateUI(state);
-      this.handleStateChange(state);
+
+      this.handleStateChange(state, prevState);
     });
   }
 
-  private handleStateChange(state: GameStoreState) {
-    const { currentState, currentLocation } = state;
+  private handleStateChange(state: GameStoreState, prevState: GameStoreState) {
+    const { currentState } = state;
 
     switch (currentState) {
       case GameState.SPINNING:
@@ -59,16 +47,6 @@ class TravelRouletteApp {
       case GameState.ZOOMING:
         this.globe.slowSpin(0.03);
         this.camera.zoomIn();
-
-        // Zoom to the selected location if available
-        if (
-          currentLocation &&
-          currentLocation.latitude !== undefined &&
-          currentLocation.longitude !== undefined
-        ) {
-          this.globe.zoomToLocation(currentLocation.latitude, currentLocation.longitude);
-        }
-
         // Change background and show rim after a delay
         setTimeout(() => {
           this.scene.setBackgroundColor(0x2d3748);
@@ -81,25 +59,25 @@ class TravelRouletteApp {
         break;
 
       case GameState.ITINERARY:
-        // Keep the same visual state as RESULT for the itinerary view
-        this.globe.stopSpin();
+        // Keep the background and globe state from result
         break;
 
       case GameState.IDLE:
-        this.camera.zoomOut();
-        this.globe.hideRim();
-        this.globe.resetRotation();
-        this.scene.setBackgroundColor(0x7fb8e5);
+        if (prevState.currentState === GameState.ZOOMING) {
+          this.camera.zoomOut();
+          this.globe.hideRim();
+          this.scene.setBackgroundColor(0x7fb8e5);
+        }
         break;
     }
   }
 
   private setupEventListeners() {
     document.querySelector('.spin-button')?.addEventListener('click', () => {
-      const { currentState, startSpin, resetToIdle, getItinerary } = useGameStore.getState();
+      const { currentState, startSpin, resetToIdle, showItinerary } = useGameStore.getState();
 
       if (currentState === GameState.RESULT) {
-        void getItinerary();
+        void showItinerary();
       } else if (currentState === GameState.ITINERARY) {
         resetToIdle();
       } else if (currentState === GameState.IDLE) {

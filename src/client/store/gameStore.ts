@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { LocationService, type SelectedLocation } from '../utils/LocationService';
-import type { ItineraryPost, ItineraryComment } from '../../shared/types/api';
+import { ItineraryData } from '../../shared/types/api';
 
 export enum GameState {
   IDLE = 'idle',
@@ -12,28 +11,28 @@ export enum GameState {
 
 interface GameStore {
   currentState: GameState;
-  currentLocation: SelectedLocation | null;
+  currentCountry: string;
   isSpinning: boolean;
-  itineraryPosts: ItineraryPost[];
-  itineraryComments: ItineraryComment[];
-  subredditUsed: string;
+  itinerary: ItineraryData | null;
 
   startSpin: () => Promise<void>;
   resetToIdle: () => void;
-  getItinerary: () => Promise<void>;
+  showItinerary: () => Promise<void>;
 
   setState: (state: GameState) => void;
-  setLocation: (location: SelectedLocation | null) => void;
+  setCountry: (country: string) => void;
   setSpinning: (isSpinning: boolean) => void;
+  setItinerary: (itinerary: ItineraryData) => void;
 }
+
+/* Remove local ItineraryData, ItineraryDay, and CommunityHighlight interfaces.
+   Use the imported ItineraryData type from '../../shared/types/api'. */
 export const useGameStore = create<GameStore>((set, get) => ({
   // set the initial state
   currentState: GameState.IDLE,
-  currentLocation: null,
+  currentCountry: '',
   isSpinning: false,
-  itineraryPosts: [],
-  itineraryComments: [],
-  subredditUsed: '',
+  itinerary: null,
 
   // actions that change the state
 
@@ -47,30 +46,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       isSpinning: true,
     });
 
-    // Get random location from local dataset while spinning
+    // Get random country while spinning
     try {
-      const locationService = LocationService.getInstance();
-
-      // Ensure locations are loaded
-      if (!locationService.isDataLoaded()) {
-        await locationService.loadLocations();
-      }
-
-      const selectedLocation = locationService.getRandomLocation();
-      set({ currentLocation: selectedLocation });
-
-      console.log('Selected location:', selectedLocation);
+      const response = await fetch('/api/random-country');
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      set({ currentCountry: data.country || 'Unknown Destination' });
     } catch (error) {
-      console.error('Error selecting location:', error);
-      set({
-        currentLocation: {
-          name: 'Unknown Destination',
-          country: 'Unknown',
-          latitude: 0,
-          longitude: 0,
-          population: 0,
-        },
-      });
+      console.error('Error fetching country:', error);
+      set({ currentCountry: 'Unknown Destination' });
     }
 
     // Phase 2: Zooming (after 2 seconds)
@@ -87,54 +71,71 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }, 2000);
   },
 
+  showItinerary: async () => {
+    const { currentCountry } = get();
+    if (!currentCountry) return;
+
+    try {
+      const response = await fetch(`/api/itinerary?country=${encodeURIComponent(currentCountry)}`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+
+      set({
+        itinerary: data.itinerary,
+        currentState: GameState.ITINERARY,
+      });
+    } catch (error) {
+      console.error('Error fetching itinerary:', error);
+      // Set a fallback itinerary
+      set({
+        itinerary: {
+          title: `${currentCountry} Adventure`,
+          days: [
+            {
+              day: 1,
+              title: 'Arrival & Exploration',
+              description: 'Arrive and explore the local area.',
+            },
+            {
+              day: 2,
+              title: 'Cultural Experience',
+              description: 'Immerse yourself in local culture.',
+            },
+            {
+              day: 3,
+              title: 'Adventure Day',
+              description: 'Try exciting local activities.',
+            },
+          ],
+          communityHighlights: [
+            {
+              username: 'traveler123',
+              content: 'Amazing destination! Highly recommend.',
+              subreddit: 'travel',
+              timeAgo: '2h',
+            },
+          ],
+        },
+        currentState: GameState.ITINERARY,
+      });
+    }
+  },
+
   resetToIdle: () => {
     set({ currentState: GameState.ZOOMING });
 
     setTimeout(() => {
       set({
         currentState: GameState.IDLE,
-        currentLocation: null,
+        currentCountry: '',
         isSpinning: false,
-        itineraryPosts: [],
-        itineraryComments: [],
-        subredditUsed: '',
+        itinerary: null,
       });
     }, 1000);
   },
 
-  getItinerary: async () => {
-    const { currentLocation } = get();
-    if (!currentLocation) return;
-
-    try {
-      const response = await fetch('/api/itinerary', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          country: currentLocation.country,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch itinerary');
-      }
-
-      const data = await response.json();
-
-      set({
-        currentState: GameState.ITINERARY,
-        itineraryPosts: data.posts,
-        itineraryComments: data.comments,
-        subredditUsed: data.subredditUsed,
-      });
-    } catch (error) {
-      console.error('Error fetching itinerary:', error);
-    }
-  },
-
   setState: (state: GameState) => set({ currentState: state }),
-  setLocation: (location: SelectedLocation | null) => set({ currentLocation: location }),
+  setCountry: (country: string) => set({ currentCountry: country }),
   setSpinning: (isSpinning: boolean) => set({ isSpinning }),
+  setItinerary: (itinerary: ItineraryData) => set({ itinerary }),
 }));
