@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { LocationService, type SelectedLocation } from '../utils/LocationService';
-import type { ItineraryPost } from '../../shared/types/api';
+import type { ItineraryPost, ItineraryComment } from '../../shared/types/api';
 
 export enum GameState {
   IDLE = 'idle',
@@ -15,6 +15,7 @@ interface GameStore {
   currentLocation: SelectedLocation | null;
   isSpinning: boolean;
   itineraryPosts: ItineraryPost[];
+  itineraryComments: ItineraryComment[];
   subredditUsed: string;
 
   startSpin: () => Promise<void>;
@@ -31,6 +32,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   currentLocation: null,
   isSpinning: false,
   itineraryPosts: [],
+  itineraryComments: [],
   subredditUsed: '',
 
   // actions that change the state
@@ -94,6 +96,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         currentLocation: null,
         isSpinning: false,
         itineraryPosts: [],
+        itineraryComments: [],
         subredditUsed: '',
       });
     }, 1000);
@@ -123,6 +126,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       set({
         currentState: GameState.ITINERARY,
         itineraryPosts: data.posts,
+        itineraryComments: data.comments,
         subredditUsed: data.subredditUsed,
       });
     } catch (error) {

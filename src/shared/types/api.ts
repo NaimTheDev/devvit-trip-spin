@@ -58,10 +58,33 @@ export type ItineraryPost = {
   hidden: boolean;
 };
 
+export type ItineraryComment = {
+  id: string;
+  authorId: string | undefined;
+  authorName: string;
+  subredditId: string;
+  subredditName: string;
+  body: string;
+  createdAt: Date;
+  parentId: string;
+  postId: string;
+  distinguishedBy: string | undefined;
+  locked: boolean;
+  stickied: boolean;
+  removed: boolean;
+  approved: boolean;
+  spam: boolean;
+  edited: boolean;
+  score: number;
+  permalink: string;
+  url: string;
+};
+
 export type ItineraryResponse = {
   type: 'itinerary';
   postId: string;
   country: string;
   subredditUsed: string;
   posts: ItineraryPost[];
+  comments: ItineraryComment[];
 };

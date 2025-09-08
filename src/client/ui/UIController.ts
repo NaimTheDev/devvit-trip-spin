@@ -1,12 +1,13 @@
 import { GameState } from '../store/gameStore';
 import { type SelectedLocation } from '../utils/LocationService';
-import type { ItineraryPost } from '../../shared/types/api';
+import type { ItineraryPost, ItineraryComment } from '../../shared/types/api';
 
 interface GameStoreState {
   currentState: GameState;
   currentLocation: SelectedLocation | null;
   isSpinning: boolean;
   itineraryPosts: ItineraryPost[];
+  itineraryComments: ItineraryComment[];
   subredditUsed: string;
 }
 
@@ -46,7 +47,7 @@ export class UIController {
   }
 
   updateUI(state: GameStoreState): void {
-    const { currentState, currentLocation, itineraryPosts, subredditUsed } = state;
+    const { currentState, currentLocation, itineraryComments, subredditUsed } = state;
 
     switch (currentState) {
       case GameState.IDLE:
@@ -63,7 +64,7 @@ export class UIController {
         break;
 
       case GameState.ITINERARY:
-        this.showItineraryState(currentLocation, itineraryPosts, subredditUsed);
+        this.showItineraryState(currentLocation, itineraryComments, subredditUsed);
         break;
     }
   }
@@ -157,7 +158,7 @@ export class UIController {
 
   private showItineraryState(
     location: SelectedLocation | null,
-    posts: ItineraryPost[],
+    comments: ItineraryComment[],
     subredditUsed: string
   ): void {
     this.overlay.style.opacity = '1';
@@ -169,7 +170,7 @@ export class UIController {
 
     const countryName = location.country;
 
-    // Create itinerary HTML
+    // Create itinerary HTML using comments as the basis for recommendations
     const itineraryHTML = `
       <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 16px; color: white; text-align: left; max-width: 600px; margin: 0 auto;">
         <div style="margin-bottom: 20px;">
@@ -178,18 +179,18 @@ export class UIController {
         </div>
         
         <div style="margin-bottom: 24px;">
-          ${posts
+          ${comments
             .slice(0, 3)
             .map(
-              (post, index) => `
+              (comment, index) => `
             <div style="background: rgba(255, 255, 255, 0.1); padding: 16px; border-radius: 12px; margin-bottom: 16px; border-left: 4px solid #ff4500;">
               <div style="display: flex; align-items: center; margin-bottom: 8px;">
                 <div style="width: 60px; height: 60px; background: #ff4500; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 16px; flex-shrink: 0;">
                   <img src="/assets/snoo_on_plane_no_background.png" alt="Day ${index + 1}" style="width: 40px; height: 40px; object-fit: cover;" onerror="this.style.display='none'">
                 </div>
                 <div>
-                  <h3 style="margin: 0 0 4px 0; font-size: 1.2rem; font-weight: 700;">Day ${index + 1}: ${this.truncateTitle(post.title)}</h3>
-                  <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">${this.extractDescription(post.title)}</p>
+                  <h3 style="margin: 0 0 4px 0; font-size: 1.2rem; font-weight: 700;">Day ${index + 1}: ${this.extractActivityFromComment(comment.body)}</h3>
+                  <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">${comment.body}</p>
                 </div>
               </div>
             </div>
@@ -218,37 +219,13 @@ export class UIController {
     this.buttonElement.disabled = false;
   }
 
-  private truncateTitle(title: string): string {
-    // Extract a meaningful part of the title and clean it up
-    let cleanTitle = title.replace(/\[.*?\]/g, '').trim();
-    const words = cleanTitle.split(' ');
-    if (words.length > 4) {
-      cleanTitle = words.slice(0, 4).join(' ') + '...';
+  private extractActivityFromComment(commentBody: string): string {
+    // Extract a meaningful activity description from comment body
+    const cleanBody = commentBody.replace(/\[.*?\]/g, '').trim();
+    const words = cleanBody.split(' ');
+    if (words.length > 6) {
+      return words.slice(0, 6).join(' ') + '...';
     }
-    return cleanTitle || 'Travel Experience';
-  }
-
-  private extractDescription(title: string): string {
-    // Generate a simple description based on common travel keywords
-    const lowerTitle = title.toLowerCase();
-    if (lowerTitle.includes('temple') || lowerTitle.includes('shrine')) {
-      return 'Explore serene temples and savor local delicacies.';
-    } else if (
-      lowerTitle.includes('food') ||
-      lowerTitle.includes('restaurant') ||
-      lowerTitle.includes('eat')
-    ) {
-      return 'Discover authentic local cuisine and hidden gems.';
-    } else if (lowerTitle.includes('city') || lowerTitle.includes('urban')) {
-      return 'Take a day trip to the vibrant city.';
-    } else if (
-      lowerTitle.includes('nature') ||
-      lowerTitle.includes('park') ||
-      lowerTitle.includes('mountain')
-    ) {
-      return 'Wander through enchanting natural landscapes.';
-    } else {
-      return 'Discover unique experiences and local culture.';
-    }
+    return cleanBody;
   }
 }

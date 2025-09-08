@@ -6,6 +6,7 @@ import {
   RandomCountryResponse,
   ItineraryResponse,
   ItineraryPost,
+  ItineraryComment,
 } from '../shared/types/api';
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
@@ -363,10 +364,10 @@ router.post<
   }
 
   try {
-    const { posts, subredditUsed } = await findContent(country);
+    const { posts, comments, subredditUsed } = await findContent(country);
 
     // Transform Reddit posts to our ItineraryPost format
-    const itineraryPosts: ItineraryPost[] = posts.children.map((post: unknown) => {
+    const itineraryPosts: ItineraryPost[] = posts.map((post: unknown) => {
       const redditPost = post as Record<string, unknown>;
       const thumbnail = redditPost.thumbnail as
         | { url: string; height: number; width: number }
@@ -408,12 +409,42 @@ router.post<
       };
     });
 
+    // Transform Reddit comments to our ItineraryComment format
+    const itineraryComments: ItineraryComment[] = comments.map((comment: unknown) => {
+      const redditComment = comment as Record<string, unknown>;
+
+      return {
+        id: String(redditComment.id || ''),
+        authorId: redditComment.authorId ? String(redditComment.authorId) : undefined,
+        authorName: String(redditComment.authorName || ''),
+        subredditId: String(redditComment.subredditId || ''),
+        subredditName: String(redditComment.subredditName || ''),
+        body: String(redditComment.body || ''),
+        createdAt: redditComment.createdAt ? new Date(String(redditComment.createdAt)) : new Date(),
+        parentId: String(redditComment.parentId || ''),
+        postId: String(redditComment.postId || ''),
+        distinguishedBy: redditComment.distinguishedBy
+          ? String(redditComment.distinguishedBy)
+          : undefined,
+        locked: Boolean(redditComment.locked),
+        stickied: Boolean(redditComment.stickied),
+        removed: Boolean(redditComment.removed),
+        approved: Boolean(redditComment.approved),
+        spam: Boolean(redditComment.spam),
+        edited: Boolean(redditComment.edited),
+        score: Number(redditComment.score || 0),
+        permalink: String(redditComment.permalink || ''),
+        url: String(redditComment.url || ''),
+      };
+    });
+
     res.json({
       type: 'itinerary',
       postId,
       country,
       subredditUsed,
       posts: itineraryPosts,
+      comments: itineraryComments,
     });
   } catch (error) {
     console.error('Failed to fetch itinerary:', error);

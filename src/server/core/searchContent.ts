@@ -1,4 +1,5 @@
 import { reddit } from '@devvit/web/server';
+import type { Comment } from '@devvit/reddit';
 
 export const findContent = async (countryName: string) => {
   // Clean up country name for subreddit search
@@ -39,16 +40,32 @@ export const findContent = async (countryName: string) => {
     limit: 10,
   });
 
+  // Get all posts and take the first one
+  const allPosts = await posts.all();
+  const firstPost = allPosts[0];
+
+  let comments: Comment[] = [];
+  if (firstPost) {
+    try {
+      const commentsListing = await reddit.getComments({
+        postId: firstPost.id,
+        sort: 'top',
+        limit: 5,
+      });
+
+      comments = await commentsListing.all();
+    } catch (error) {
+      console.log(`Failed to get comments for post ${firstPost.id}:`, error);
+    }
+  }
+
   return {
-    posts,
+    posts: allPosts,
+    comments,
     subredditUsed,
   };
 };
 
 export const getSubredditInfo = async (subredditName: string) => {
-  try {
-    return await reddit.getSubredditInfoByName(subredditName);
-  } catch (error) {
-    return null;
-  }
+  return await reddit.getSubredditInfoByName(subredditName);
 };
