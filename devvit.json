@@ -5,8 +5,7 @@
     "http": {
       "enable": true,
       "domains": ["www.sathishsundar.in", "api.openai.com"]
-    },
-    "redditAPI": true
+    }
   },
   "settings": {
     "global": {
@@ -27,8 +26,7 @@
     }
   },
   "server": {
-    "dir": "dist/server",
-    "entry": "index.cjs"
+    "entry": "dist/server/index.cjs"
   },
   "media": {},
   "menu": {
