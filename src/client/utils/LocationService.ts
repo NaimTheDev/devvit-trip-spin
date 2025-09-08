@@ -53,11 +53,11 @@ export class LocationService {
       if (!response.ok) {
         throw new Error(`Failed to load locations: ${response.statusText}`);
       }
-      
+
       const data: LocationData = await response.json();
       this.locations = data.features;
       this.isLoaded = true;
-      
+
       console.log(`Loaded ${this.locations.length} locations from dataset`);
     } catch (error) {
       console.error('Error loading locations:', error);
@@ -71,7 +71,7 @@ export class LocationService {
     }
 
     // Filter for interesting places (capitals, major cities, etc.)
-    const significantPlaces = this.locations.filter(location => {
+    const significantPlaces = this.locations.filter((location) => {
       const props = location.properties;
       return (
         props.featurecla.includes('capital') ||
@@ -82,18 +82,18 @@ export class LocationService {
 
     // Use all locations if no significant places found
     const locationPool = significantPlaces.length > 0 ? significantPlaces : this.locations;
-    
+
     if (locationPool.length === 0) {
       throw new Error('No locations available');
     }
-    
+
     const randomIndex = Math.floor(Math.random() * locationPool.length);
     const selectedFeature = locationPool[randomIndex];
-    
+
     if (!selectedFeature) {
       throw new Error('Failed to select a location');
     }
-    
+
     const props = selectedFeature.properties;
 
     return {
@@ -102,7 +102,7 @@ export class LocationService {
       region: props.adm1name,
       latitude: props.latitude,
       longitude: props.longitude,
-      population: props.pop_max || 0
+      population: props.pop_max || 0,
     };
   }
 

@@ -11,6 +11,7 @@ import {
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
 import { findContent } from './core/searchContent';
+import { OpenAIService } from './core/OpenAIService';
 
 const app = express();
 
@@ -438,6 +439,9 @@ router.post<
       };
     });
 
+    // Generate AI-powered itinerary using OpenAI
+    const generatedItinerary = await OpenAIService.generateItinerary(country, posts, comments);
+
     res.json({
       type: 'itinerary',
       postId,
@@ -445,6 +449,7 @@ router.post<
       subredditUsed,
       posts: itineraryPosts,
       comments: itineraryComments,
+      generatedItinerary,
     });
   } catch (error) {
     console.error('Failed to fetch itinerary:', error);

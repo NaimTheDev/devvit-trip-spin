@@ -80,6 +80,21 @@ export type ItineraryComment = {
   url: string;
 };
 
+export type ItineraryDay = {
+  day: number;
+  title: string;
+  description: string;
+  activities: string[];
+};
+
+export type GeneratedItinerary = {
+  destination: string;
+  country: string;
+  duration: string;
+  days: ItineraryDay[];
+  communityHighlights: string[];
+};
+
 export type ItineraryResponse = {
   type: 'itinerary';
   postId: string;
@@ -87,4 +102,5 @@ export type ItineraryResponse = {
   subredditUsed: string;
   posts: ItineraryPost[];
   comments: ItineraryComment[];
+  generatedItinerary: GeneratedItinerary;
 };
