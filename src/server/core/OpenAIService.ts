@@ -87,7 +87,7 @@ Focus on authentic local experiences mentioned in the community content. Make it
             {
               role: 'system',
               content:
-                'You are a travel expert who creates detailed itineraries from community recommendations. Always respond with valid JSON only.',
+                'You are a travel expert who creates detailed itineraries from community recommendations. Always respond with valid JSON only, without markdown formatting or code blocks.',
             },
             {
               role: 'user',
@@ -111,8 +111,14 @@ Focus on authentic local experiences mentioned in the community content. Make it
         throw new Error('No content received from OpenAI');
       }
 
-      // Parse the JSON response
-      const itinerary = JSON.parse(content) as GeneratedItinerary;
+      let cleanContent = content.trim();
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+
+      const itinerary = JSON.parse(cleanContent) as GeneratedItinerary;
       return itinerary;
     } catch (error) {
       console.error('Error generating itinerary with OpenAI:', error);
