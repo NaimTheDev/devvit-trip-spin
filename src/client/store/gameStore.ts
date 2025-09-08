@@ -25,25 +25,8 @@ interface GameStore {
   setItinerary: (itinerary: ItineraryData) => void;
 }
 
-interface ItineraryData {
-  title: string;
-  days: ItineraryDay[];
-  communityHighlights: CommunityHighlight[];
-}
-
-interface ItineraryDay {
-  day: number;
-  title: string;
-  description: string;
-  imageUrl?: string;
-}
-
-interface CommunityHighlight {
-  username: string;
-  content: string;
-  subreddit: string;
-  timeAgo: string;
-}
+/* Remove local ItineraryData, ItineraryDay, and CommunityHighlight interfaces.
+   Use the imported ItineraryData type from '../../shared/types/api'. */
 export const useGameStore = create<GameStore>((set, get) => ({
   // set the initial state
   currentState: GameState.IDLE,
@@ -96,7 +79,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const response = await fetch(`/api/itinerary?country=${encodeURIComponent(currentCountry)}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
-      
+
       set({
         itinerary: data.itinerary,
         currentState: GameState.ITINERARY,

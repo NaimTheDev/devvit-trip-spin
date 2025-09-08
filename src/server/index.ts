@@ -361,7 +361,7 @@ router.get<{ postId: string }, ItineraryResponse | { status: string; message: st
 
     try {
       const itinerary = await ItineraryService.generateItinerary(country);
-      
+
       res.json({
         type: 'itinerary',
         postId,

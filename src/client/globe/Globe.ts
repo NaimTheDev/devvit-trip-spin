@@ -6,6 +6,9 @@ export class Globe {
   private spinSpeed = 0;
   private targetSpinSpeed = 0;
   private earthRadius = 6;
+  private targetRotationY = 0;
+  private targetRotationX = 0;
+  private isZoomingToLocation = false;
 
   constructor(scene: THREE.Scene) {
     this.createGlobe(scene);
@@ -64,13 +67,62 @@ export class Globe {
   }
 
   update(): void {
-    // Smooth spin speed transition
-    this.spinSpeed += (this.targetSpinSpeed - this.spinSpeed) * 0.05;
+    if (this.isZoomingToLocation) {
+      // Smoothly rotate to target position
+      const rotationLerpSpeed = 0.03;
+      this.earthSphere.rotation.y +=
+        (this.targetRotationY - this.earthSphere.rotation.y) * rotationLerpSpeed;
+      this.earthSphere.rotation.x +=
+        (this.targetRotationX - this.earthSphere.rotation.x) * rotationLerpSpeed;
 
-    if (Math.abs(this.spinSpeed) > 0.001) {
-      this.earthSphere.rotation.y += this.spinSpeed;
-      this.rim.rotation.z += this.spinSpeed * 0.5; // Rim rotates slower
+      // Check if we're close enough to the target
+      const rotationYDiff = Math.abs(this.targetRotationY - this.earthSphere.rotation.y);
+      const rotationXDiff = Math.abs(this.targetRotationX - this.earthSphere.rotation.x);
+
+      if (rotationYDiff < 0.01 && rotationXDiff < 0.01) {
+        this.isZoomingToLocation = false;
+      }
+    } else {
+      // Smooth spin speed transition for normal spinning
+      this.spinSpeed += (this.targetSpinSpeed - this.spinSpeed) * 0.05;
+
+      if (Math.abs(this.spinSpeed) > 0.001) {
+        this.earthSphere.rotation.y += this.spinSpeed;
+        this.rim.rotation.z += this.spinSpeed * 0.5; // Rim rotates slower
+      }
     }
+  }
+
+  /**
+   * Rotate the globe to show a specific geographical location
+   * @param latitude - Latitude in degrees (-90 to 90)
+   * @param longitude - Longitude in degrees (-180 to 180)
+   */
+  zoomToLocation(latitude: number, longitude: number): void {
+    // Convert geographic coordinates to rotation angles
+    // Longitude maps to Y rotation (around vertical axis)
+    // Latitude maps to X rotation (around horizontal axis)
+
+    // Convert degrees to radians and adjust for Three.js coordinate system
+    const latRad = (latitude * Math.PI) / 180;
+    const lonRad = (longitude * Math.PI) / 180;
+
+    // For longitude: rotate around Y axis to bring the longitude to the front
+    // We want the target longitude to face the camera, so we rotate by the negative longitude
+    this.targetRotationY = -lonRad;
+
+    // For latitude: rotate around X axis to bring the latitude to the center
+    // Positive latitude (north) should rotate the globe down to bring it to center
+    this.targetRotationX = -latRad;
+
+    this.isZoomingToLocation = true;
+    this.stopSpin(); // Stop any spinning while zooming to location
+  }
+
+  resetRotation(): void {
+    this.targetRotationY = 0;
+    this.targetRotationX = 0;
+    this.isZoomingToLocation = true;
   }
 
   getSpinSpeed(): number {
