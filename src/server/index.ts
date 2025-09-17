@@ -7,6 +7,9 @@ import {
   ItineraryResponse,
   ItineraryPost,
   ItineraryComment,
+  ShareTripRequest,
+  ShareTripResponse,
+  GeneratedItinerary,
 } from '../shared/types/api';
 import { redis, reddit, createServer, context, getServerPort } from '@devvit/web/server';
 import { createPost } from './core/post';
@@ -456,6 +459,93 @@ router.post<
     res.status(500).json({
       status: 'error',
       message: 'Failed to generate itinerary',
+    });
+  }
+});
+
+router.post<object, ShareTripResponse>('/api/share-trip', async (req, res): Promise<void> => {
+  try {
+    const { country, itinerary, personalMessage } = req.body as ShareTripRequest;
+    const { subredditName, postId } = context;
+
+    if (!subredditName) {
+      res.status(400).json({
+        type: 'share-trip',
+        postId: '',
+        postUrl: '',
+        success: false,
+      });
+      return;
+    }
+
+    // Format the itinerary into a nice text post
+    const formatItinerary = (itinerary: GeneratedItinerary): string => {
+      let text = `🌍 **Planning a trip to ${itinerary.destination}!** 🌍\n\n`;
+
+      if (personalMessage) {
+        text += `${personalMessage}\n\n`;
+      }
+
+      text += `I just used Trip Spin to plan an amazing ${itinerary.duration.toLowerCase()} to ${country}! Here's what the community recommended:\n\n`;
+
+      // Add itinerary days
+      itinerary.days.forEach(
+        (day: { day: number; title: string; description: string; activities: string[] }) => {
+          text += `**Day ${day.day}: ${day.title}**\n`;
+          text += `${day.description}\n`;
+          text += `Activities:\n`;
+          day.activities.forEach((activity: string) => {
+            text += `• ${activity}\n`;
+          });
+          text += `\n`;
+        }
+      );
+
+      // Add community highlights
+      if (itinerary.communityHighlights && itinerary.communityHighlights.length > 0) {
+        text += `**Community Highlights:**\n`;
+        itinerary.communityHighlights.forEach((highlight: string) => {
+          text += `🌟 ${highlight}\n`;
+        });
+        text += `\n`;
+      }
+
+      text += `Want to join me or have suggestions? Drop a comment below! 👇\n\n`;
+      text += `**🎯 Want to plan your own adventure?**\n`;
+      if (postId) {
+        text += `Try Trip Spin yourself: https://reddit.com/r/${subredditName}/comments/${postId}/\n\n`;
+      } else {
+        text += `Try Trip Spin yourself: https://reddit.com/r/${subredditName}/\n\n`;
+      }
+      text += `*Generated using Trip Spin - spin the globe and discover your next adventure!* 🎯`;
+
+      return text;
+    };
+
+    const postTitle = `🌍 Planning an epic trip to ${itinerary.destination} - who wants to join? 🌍`;
+    const postBody = formatItinerary(itinerary);
+
+    const post = await reddit.submitPost({
+      subredditName: subredditName,
+      title: postTitle,
+      text: postBody,
+    });
+
+    const postUrl = `https://reddit.com/r/${subredditName}/comments/${post.id}`;
+
+    res.json({
+      type: 'share-trip',
+      postId: post.id,
+      postUrl: postUrl,
+      success: true,
+    });
+  } catch (error) {
+    console.error('Failed to share trip:', error);
+    res.status(500).json({
+      type: 'share-trip',
+      postId: '',
+      postUrl: '',
+      success: false,
     });
   }
 });

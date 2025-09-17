@@ -26,7 +26,15 @@ class TravelRouletteApp {
     void this.initializeLocationService();
     this.setupGameStoreSubscription();
     this.setupEventListeners();
+    this.setupShareCallback();
     this.animate();
+  }
+
+  private setupShareCallback() {
+    this.uiController.setShareCallback(async (personalMessage?: string) => {
+      const { shareTrip } = useGameStore.getState();
+      return await shareTrip(personalMessage);
+    });
   }
 
   private async initializeLocationService() {

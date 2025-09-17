@@ -19,11 +19,20 @@ export class UIController {
   private spinText!: HTMLElement;
   private overlay!: HTMLElement;
   private snooImageElement: HTMLImageElement | null = null;
+  private shareCallback?: (
+    personalMessage?: string
+  ) => Promise<{ success: boolean; postUrl?: string }>;
 
   constructor() {
     this.initializeElements();
     // Try to find the snoo image if it already exists
     this.snooImageElement = document.querySelector('.snoo-plane-img') as HTMLImageElement;
+  }
+
+  setShareCallback(
+    callback: (personalMessage?: string) => Promise<{ success: boolean; postUrl?: string }>
+  ): void {
+    this.shareCallback = callback;
   }
 
   private initializeElements(): void {
@@ -278,7 +287,7 @@ export class UIController {
             </div>
 
             <!-- Travel Poll Section -->
-            <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 16px; margin-bottom: 40px;">
+            <div style="background: rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
               <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 600; color: white;">Would you take this trip?</h3>
               <div style="display: flex; flex-direction: column; gap: 8px;">
                 <div style="background: rgba(45, 175, 235, 0.8); border-radius: 25px; padding: 12px 20px; border: 2px solid #2dafeb; display: flex; align-items: center;">
@@ -295,6 +304,26 @@ export class UIController {
                 </div>
               </div>
             </div>
+
+            <!-- Share Trip Section -->
+            <div style="background: rgba(255, 69, 0, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 40px; border: 1px solid rgba(255, 69, 0, 0.3);">
+              <h3 style="margin: 0 0 12px 0; font-size: 1.1rem; font-weight: 600; color: white; display: flex; align-items: center;">
+                <span style="margin-right: 8px;">📤</span>
+                Share Your Adventure
+              </h3>
+              <p style="margin: 0 0 16px 0; font-size: 0.9rem; color: rgba(255,255,255,0.8);">
+                Create a post in the community to find travel buddies and get more recommendations!
+              </p>
+              <button 
+                id="share-trip-btn" 
+                style="width: 100%; background: linear-gradient(135deg, #ff4500 0%, #ff6b35 100%); color: white; border: none; border-radius: 25px; padding: 14px 20px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;"
+                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255, 69, 0, 0.4)'"
+                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
+              >
+                <span>🌍</span>
+                <span>Share My Trip to ${destination}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -305,5 +334,58 @@ export class UIController {
     this.diceIcon.textContent = '🔄';
     this.spinText.textContent = 'Plan Another Trip';
     this.buttonElement.disabled = false;
+
+    // Set up share button event listener
+    setTimeout(() => {
+      const shareButton = document.getElementById('share-trip-btn');
+      if (shareButton) {
+        shareButton.addEventListener('click', () => this.handleShareTrip());
+      }
+    }, 100);
+  }
+
+  private async handleShareTrip(): Promise<void> {
+    if (!this.shareCallback) {
+      console.warn('Share callback not set');
+      return;
+    }
+
+    const shareButton = document.getElementById('share-trip-btn');
+    if (shareButton) {
+      const originalContent = shareButton.innerHTML;
+      shareButton.innerHTML = '<span>🌍</span><span>Sharing...</span>';
+      shareButton.style.opacity = '0.7';
+      (shareButton as HTMLButtonElement).disabled = true;
+
+      try {
+        const result = await this.shareCallback();
+
+        if (result.success) {
+          shareButton.innerHTML = '<span>✅</span><span>Trip Shared!</span>';
+          shareButton.style.background = 'linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)';
+
+          if (result.postUrl) {
+            setTimeout(() => {
+              // Optionally open the post in a new tab
+              // window.open(result.postUrl, '_blank');
+            }, 1000);
+          }
+        } else {
+          shareButton.innerHTML = '<span>❌</span><span>Share Failed</span>';
+          shareButton.style.background = 'linear-gradient(135deg, #f44336 0%, #ef5350 100%)';
+        }
+      } catch (error) {
+        console.error('Error sharing trip:', error);
+        shareButton.innerHTML = '<span>❌</span><span>Share Failed</span>';
+        shareButton.style.background = 'linear-gradient(135deg, #f44336 0%, #ef5350 100%)';
+      }
+
+      setTimeout(() => {
+        shareButton.innerHTML = originalContent;
+        shareButton.style.background = 'linear-gradient(135deg, #ff4500 0%, #ff6b35 100%)';
+        shareButton.style.opacity = '1';
+        (shareButton as HTMLButtonElement).disabled = false;
+      }, 3000);
+    }
   }
 }

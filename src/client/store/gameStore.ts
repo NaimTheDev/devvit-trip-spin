@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { LocationService, type SelectedLocation } from '../utils/LocationService';
 import type { ItineraryPost, ItineraryComment, GeneratedItinerary } from '../../shared/types/api';
+import { LoadingAnimation } from '../utils/LoadingAnimation';
 
 export enum GameState {
   IDLE = 'idle',
@@ -22,6 +23,7 @@ interface GameStore {
   startSpin: () => Promise<void>;
   resetToIdle: () => void;
   getItinerary: () => Promise<void>;
+  shareTrip: (personalMessage?: string) => Promise<{ success: boolean; postUrl?: string }>;
 
   setState: (state: GameState) => void;
   setLocation: (location: SelectedLocation | null) => void;
@@ -109,7 +111,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { currentLocation } = get();
     if (!currentLocation) return;
 
+    // Show loading animation
+    const loadingAnimation = new LoadingAnimation();
+
     try {
+      await loadingAnimation.show();
+
+      // Update loading text
+      loadingAnimation.updateText('Searching travel communities...');
+
       // For testing purposes, create mock data when API is not available
       const mockItinerary: GeneratedItinerary = {
         destination: currentLocation.name || currentLocation.country,
@@ -118,34 +128,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
         days: [
           {
             day: 1,
-            title: 'Explore Historic Center and Culture',
-            description:
-              'Immerse yourself in the rich history and vibrant culture of this amazing destination.',
+            title: 'Arrival and City Introduction',
+            description: 'Explore the iconic landmarks and get oriented with your new destination.',
             activities: [
-              'Visit historic landmarks',
-              'Try local cuisine',
-              'Explore museums',
-              'Walk through old town',
+              'Check into accommodation',
+              'Visit main city center',
+              'Local orientation walk',
+              'Try traditional cuisine',
             ],
           },
           {
             day: 2,
-            title: 'Natural Wonders and Scenic Views',
-            description:
-              'Discover the natural beauty and breathtaking landscapes that make this place special.',
+            title: 'Cultural Immersion',
+            description: 'Dive deep into the local culture and history.',
             activities: [
-              'Nature hiking',
-              'Scenic viewpoints',
-              'Local markets',
+              'Museum visits',
+              'Historical site tours',
+              'Local market exploration',
               'Cultural performances',
             ],
           },
           {
             day: 3,
-            title: 'Adventure and Local Experiences',
-            description: 'Experience authentic local life and create unforgettable memories.',
+            title: 'Adventure and Local Life',
+            description: 'Experience authentic local activities and hidden gems.',
             activities: [
-              'Adventure activities',
+              'Local workshops',
+              'Scenic viewpoints',
               'Local workshops',
               'Traditional crafts',
               'Community visits',
@@ -161,6 +170,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       // Try to fetch from API first, but fall back to mock data
       try {
+        loadingAnimation.updateText('Fetching community recommendations...');
+
         const response = await fetch('/api/itinerary', {
           method: 'POST',
           headers: {
@@ -172,7 +183,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
         });
 
         if (response.ok) {
+          loadingAnimation.updateText('Generating your personalized itinerary...');
+
+          // Add a small delay to show the AI generation message
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+
           const data = await response.json();
+
+          // Hide loading animation before setting state
+          loadingAnimation.hide();
+
           set({
             currentState: GameState.ITINERARY,
             itineraryPosts: data.posts,
@@ -184,7 +204,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       } catch (apiError) {
         console.log('API not available, using mock data for testing');
+        loadingAnimation.updateText('Creating sample itinerary...');
+
+        // Add delay for mock data too
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
+
+      // Hide loading animation before setting state
+      loadingAnimation.hide();
 
       // Use mock data when API is not available
       set({
@@ -196,6 +223,44 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     } catch (error) {
       console.error('Error fetching itinerary:', error);
+
+      // Make sure to hide loading animation even on error
+      loadingAnimation.hide();
+    }
+  },
+
+  shareTrip: async (personalMessage?: string) => {
+    const { currentLocation, generatedItinerary } = get();
+
+    if (!currentLocation || !generatedItinerary) {
+      return { success: false };
+    }
+
+    try {
+      const response = await fetch('/api/share-trip', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          country: currentLocation.country,
+          itinerary: generatedItinerary,
+          personalMessage,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          success: data.success,
+          postUrl: data.postUrl,
+        };
+      } else {
+        return { success: false };
+      }
+    } catch (error) {
+      console.error('Error sharing trip:', error);
+      return { success: false };
     }
   },
 

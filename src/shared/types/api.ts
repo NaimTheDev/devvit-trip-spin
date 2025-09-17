@@ -104,3 +104,16 @@ export type ItineraryResponse = {
   comments: ItineraryComment[];
   generatedItinerary: GeneratedItinerary;
 };
+
+export type ShareTripRequest = {
+  country: string;
+  itinerary: GeneratedItinerary;
+  personalMessage?: string;
+};
+
+export type ShareTripResponse = {
+  type: 'share-trip';
+  postId: string;
+  postUrl: string;
+  success: boolean;
+};
